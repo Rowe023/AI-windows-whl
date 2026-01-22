@@ -16,16 +16,21 @@ $ErrorActionPreference = "Stop"
 
 if ($SageAttnVersion -eq "latest") {
     Write-Host "Input is 'latest', determining the latest version of SageAttention..."
-    # SageAttention releases are on the woct0rdho fork, so we query that repo.
     $latestTag = gh release list --repo woct0rdho/SageAttention --limit 1 --json tagName --jq '.[0].tagName'
     $SageAttnVersion = $latestTag
     Write-Host "Latest version found: $SageAttnVersion"
 }
 
-$MatrixCudaVersion = $CudaVersion -replace '\.', ''
+# 关键修改：CUDA 13.0 → 131（匹配PyTorch的cu130）
+$MatrixCudaVersion = $CudaVersion -replace '\.', ''  # 13.0 → 130，13.1 → 131
+# 强制修正：如果是13.0/13.1，都映射为130（匹配你PyTorch的cu130）
+if ($MatrixCudaVersion -in "130", "131") {
+    $MatrixCudaVersion = "130"
+}
 $MatrixTorchVersion = $TorchVersion -replace '^(\d+\.\d+).*', '$1'
 $env:TORCH_CUDA_VERSION = python .github/scripts/get_torch_cuda_version.py $MatrixCudaVersion $MatrixTorchVersion
 
+# 后续步骤保持不变（PyTorch安装逻辑已适配2.9.0+的nightly通道）
 $TorchBaseVersion = [version]$TorchVersion
 $NightlyThreshold = [version]"2.9.0"
 
