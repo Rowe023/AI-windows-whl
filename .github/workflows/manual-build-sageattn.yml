@@ -8,6 +8,24 @@ on:
         required: true
         type: string
         default: 'latest'
+      # 新增：自定义Python版本（匹配你的3.13）
+      python_version:
+        description: 'Python version (e.g., 3.13)'
+        required: true
+        type: string
+        default: '3.13'
+      # 新增：自定义PyTorch版本（匹配你的2.9.1）
+      torch_version:
+        description: 'PyTorch version (e.g., 2.9.1)'
+        required: true
+        type: string
+        default: '2.9.1'
+      # 新增：自定义CUDA版本（编译用，匹配你的13.0/13.1）
+      cuda_version:
+        description: 'CUDA version (e.g., 13.0)'
+        required: true
+        type: string
+        default: '13.0'
 
 jobs:
   build-wheel:
@@ -18,15 +36,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Set up Python 3.13
+      # 修改：使用自定义的Python版本（不再固定3.13）
+      - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.13'
+          python-version: ${{ inputs.python_version }}
 
-      - name: Install CUDA Toolkit 13.0
+      # 修改：使用自定义的CUDA版本（不再固定13.0.0）
+      - name: Install CUDA Toolkit
         uses: N-Storm/cuda-toolkit@v0.2.27m
         with:
-          cuda: '13.0.0'
+          cuda: ${{ inputs.cuda_version }}.0  # 拼接成完整版本（13.0 → 13.0.0）
           method: 'network'
           use-github-cache: false
           use-local-cache: false
@@ -40,6 +60,7 @@ jobs:
         shell: pwsh
         run: python -m pip install -U setuptools wheel packaging ninja
 
+      # 修改：传递自定义的Python/PyTorch/CUDA参数到编译脚本
       - name: Build wheel
         id: build_wheel
         shell: pwsh
@@ -47,10 +68,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           .\.github\scripts\build_sage_attention_windows.ps1 -SageAttnVersion "${{ github.event.inputs.sage_attn_version }}" `
-                                                             -PythonVersion "3.13" `
-                                                             -TorchVersion "2.9.0" `
-                                                             -CudaVersion "13.0"
+                                                             -PythonVersion "${{ github.event.inputs.python_version }}" `
+                                                             -TorchVersion "${{ github.event.inputs.torch_version }}" `
+                                                             -CudaVersion "${{ github.event.inputs.cuda_version }}"
 
+      # 后续步骤（测试安装、上传artifact）保持不变
       - name: Test wheel installation
         shell: pwsh
         run: |
